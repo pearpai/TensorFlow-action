@@ -67,3 +67,24 @@ y = cur_layer
 mse_loss = tf.reduce_sum(tf.pow(y_ - y, 2)) / sample_size
 tf.add_to_collection('losses', mse_loss)
 loss = tf.add_n(tf.get_collection('losses'))
+
+train_op = tf.train.AdamOptimizer(0.001).minimize(loss)
+TRAINING_STEPS = 40000
+
+with tf.Session() as sess:
+    tf.global_variables_initializer().run()
+    for i in range(TRAINING_STEPS):
+        sess.run(train_op, feed_dict={x: data, y_: label})
+        if i % 2000 == 0:
+            print("After %d steps, loss: %f" % (i, sess.run(loss, feed_dict={x: data, y_: label})))
+
+    # 画出训练后的分割曲线
+    xx, yy = np.mgrid[-1:1:.01, 0:2:.01]
+    grid = np.c_[xx.ravel(), yy.ravel()]
+    probs = sess.run(y, feed_dict={x: grid})
+    probs = probs.reshape(xx.shape)
+
+plt.scatter(data[:, 0], data[:, 1], c=label,
+            cmap="RdBu", vmin=-.2, vmax=1.2, edgecolor="white")
+plt.contour(xx, yy, probs, levels=[.5], cmap="Greys", vmin=0, vmax=.1)
+plt.show()
