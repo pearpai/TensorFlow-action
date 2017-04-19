@@ -96,8 +96,6 @@ ENV/
 .ropeproject
 .idea/
 
-/datasets/MNIST_data/train-images-idx3-ubyte.gz
-/datasets/MNIST_data/train-labels-idx1-ubyte.gz
-/datasets/MNIST_data/t10k-images-idx3-ubyte.gz
-/datasets/MNIST_data/t10k-labels-idx1-ubyte.gz
 /Chapter05/Saved_model/**
+/datasets/**
+/Chapter05/Saved_model/
