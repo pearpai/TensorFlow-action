@@ -96,6 +96,5 @@ ENV/
 .ropeproject
 .idea/
 
-/Chapter05/Saved_model/**
-/datasets/**
-/Chapter05/Saved_model/
+/deep_learning_with_tensorFlow/Chapter05/Saved_model/**
+/deep_learning_with_tensorFlow/datasets/**
