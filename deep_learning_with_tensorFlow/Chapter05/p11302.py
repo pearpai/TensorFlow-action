@@ -1,3 +1,4 @@
+# coding=utf-8
 import tensorflow as tf
 
 v = tf.Variable(0, dtype=tf.float32, name='v3')

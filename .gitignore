@@ -98,3 +98,5 @@ ENV/
 
 /deep_learning_with_tensorFlow/Chapter05/Saved_model/**
 /deep_learning_with_tensorFlow/datasets/**
+/action/demo2/images/**
+/deep_learning_with_tensorFlow/Chapter09/log/
