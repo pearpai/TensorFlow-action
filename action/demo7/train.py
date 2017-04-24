@@ -4,6 +4,7 @@ from card_no import number
 
 import numpy as np
 import tensorflow as tf
+import os
 
 text, image = get_picture_info()
 print"验证码图像channel: {}".format(image.shape)  # (60, 160, 3)
@@ -134,34 +135,37 @@ def crack_captcha_cnn(w_alpha=0.01, b_alpha=0.1):
     # out_alpha = np.sqrt(2.0/1024)
 
     # 3 conv layer
-    w_c1 = tf.Variable(w_alpha * tf.random_normal([3, 3, 1, 32]))
-    b_c1 = tf.Variable(b_alpha * tf.random_normal([32]))
-    conv1 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(x, w_c1, strides=[1, 1, 1, 1], padding='SAME'), b_c1))
-    conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    conv1 = tf.nn.dropout(conv1, keep_prob)
+    with tf.name_scope("conv1"):
+        w_c1 = tf.Variable(w_alpha * tf.random_normal([3, 3, 1, 32]))
+        b_c1 = tf.Variable(b_alpha * tf.random_normal([32]))
+        conv1 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(x, w_c1, strides=[1, 1, 1, 1], padding='SAME'), b_c1))
+        conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        conv1 = tf.nn.dropout(conv1, keep_prob)
 
-    w_c2 = tf.Variable(w_alpha * tf.random_normal([3, 3, 32, 64]))
-    b_c2 = tf.Variable(b_alpha * tf.random_normal([64]))
-    conv2 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(conv1, w_c2, strides=[1, 1, 1, 1], padding='SAME'), b_c2))
-    conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    conv2 = tf.nn.dropout(conv2, keep_prob)
-
-    w_c3 = tf.Variable(w_alpha * tf.random_normal([3, 3, 64, 64]))
-    b_c3 = tf.Variable(b_alpha * tf.random_normal([64]))
-    conv3 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(conv2, w_c3, strides=[1, 1, 1, 1], padding='SAME'), b_c3))
-    conv3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    conv3 = tf.nn.dropout(conv3, keep_prob)
+    with tf.name_scope("conv2"):
+        w_c2 = tf.Variable(w_alpha * tf.random_normal([3, 3, 32, 64]))
+        b_c2 = tf.Variable(b_alpha * tf.random_normal([64]))
+        conv2 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(conv1, w_c2, strides=[1, 1, 1, 1], padding='SAME'), b_c2))
+        conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        conv2 = tf.nn.dropout(conv2, keep_prob)
+    with tf.name_scope("conv3"):
+        w_c3 = tf.Variable(w_alpha * tf.random_normal([3, 3, 64, 64]))
+        b_c3 = tf.Variable(b_alpha * tf.random_normal([64]))
+        conv3 = tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(conv2, w_c3, strides=[1, 1, 1, 1], padding='SAME'), b_c3))
+        conv3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+        conv3 = tf.nn.dropout(conv3, keep_prob)
 
     # Fully connected layer
-    w_d = tf.Variable(w_alpha * tf.random_normal([409600, 1024]))
-    b_d = tf.Variable(b_alpha * tf.random_normal([1024]))
-    dense = tf.reshape(conv3, [-1, w_d.get_shape().as_list()[0]])
-    dense = tf.nn.relu(tf.add(tf.matmul(dense, w_d), b_d))
-    dense = tf.nn.dropout(dense, keep_prob)
-
-    w_out = tf.Variable(w_alpha * tf.random_normal([1024, MAX_CAPTCHA * CHAR_SET_LEN]))
-    b_out = tf.Variable(b_alpha * tf.random_normal([MAX_CAPTCHA * CHAR_SET_LEN]))
-    out = tf.add(tf.matmul(dense, w_out), b_out)
+    with tf.name_scope("fully_connected_1"):
+        w_d = tf.Variable(w_alpha * tf.random_normal([409600, 1024]))
+        b_d = tf.Variable(b_alpha * tf.random_normal([1024]))
+        dense = tf.reshape(conv3, [-1, w_d.get_shape().as_list()[0]])
+        dense = tf.nn.relu(tf.add(tf.matmul(dense, w_d), b_d))
+        dense = tf.nn.dropout(dense, keep_prob)
+    with tf.name_scope("fully_connected_out_2"):
+        w_out = tf.Variable(w_alpha * tf.random_normal([1024, MAX_CAPTCHA * CHAR_SET_LEN]))
+        b_out = tf.Variable(b_alpha * tf.random_normal([MAX_CAPTCHA * CHAR_SET_LEN]))
+        out = tf.add(tf.matmul(dense, w_out), b_out)
     # out = tf.nn.softmax(out)
     return out
 
@@ -173,28 +177,36 @@ def train_crack_captcha_cnn():
     # loss
     # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(output, Y))
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=Y))
+    tf.summary.scalar('cross_entropy', loss)
     # 最后一层用来分类的softmax和sigmoid有什么不同？
     # optimizer 为了加快训练 learning_rate应该开始大，然后慢慢衰
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
+    global_step = tf.Variable(0, name="global_step", trainable=False)
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss, global_step=global_step)
 
     predict = tf.reshape(output, [-1, MAX_CAPTCHA, CHAR_SET_LEN])
     max_idx_p = tf.argmax(predict, 2)
     max_idx_l = tf.argmax(tf.reshape(Y, [-1, MAX_CAPTCHA, CHAR_SET_LEN]), 2)
     correct_pred = tf.equal(max_idx_p, max_idx_l)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    tf.summary.scalar('accuracy', accuracy)
 
     saver = tf.train.Saver()
+    writer = tf.summary.FileWriter("log/modified_mnist_train.log", tf.get_default_graph())
+    merged = tf.summary.merge_all(key="summaries")
+    count_params_detail()
     with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        # saver.restore(sess, tf.train.latest_checkpoint('model'))
+        # 判断session 是否存在 如果存在 用已经保存的
+        if os.path.exists('model/checkpoint'):
+            saver.restore(sess, tf.train.latest_checkpoint('model'))
+        else:
+            sess.run(tf.global_variables_initializer())
 
-        step = 0
         while True:
             batch_x, batch_y = get_next_batch(64)
-            _, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
+            _, loss_, summary, step = sess.run([optimizer, loss, merged, global_step],
+                                               feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
             print(step, loss_)
-            # if step % 20 == 0:
-            #     saver.save(sess, "model/model.ckpt", global_step=step)
+            writer.add_summary(summary, step)
 
             # 每100 step计算一次准确率
             if step % 100 == 0:
@@ -202,11 +214,14 @@ def train_crack_captcha_cnn():
                 acc = sess.run(accuracy, feed_dict={X: batch_x_test, Y: batch_y_test, keep_prob: 1.})
                 print(step, acc)
                 # 如果准确率大于50%,保存模型,完成训练
-                if acc > 0.5 or step == 15000:
-                    saver.save(sess, "model/model.ckpt", global_step=step)
+                if step % 5000 == 0:
+                    saver.save(sess, "model/model.ckpt", global_step=global_step)
+                if acc > 0.5 and step % 5000 != 0:
+                    saver.save(sess, "model/model.ckpt", global_step=global_step)
                     break
 
             step += 1
+    writer.close()
 
 
 def crack_captcha(captcha_image):
@@ -227,6 +242,18 @@ def crack_captcha(captcha_image):
             i += 1
         return vec2text(vector)
 
+
+def count_params_detail():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        variable_parametes = 1
+        for dim in shape:
+            variable_parametes *= dim.value
+        print(shape, 'total:', variable_parametes)
+        total_parameters += variable_parametes
+    print("Model size: %dM" % (total_parameters / 1000000,))
 
 if __name__ == '__main__':
     train_crack_captcha_cnn()

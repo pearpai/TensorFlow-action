@@ -100,3 +100,4 @@ ENV/
 /deep_learning_with_tensorFlow/datasets/**
 /action/demo2/images/**
 /deep_learning_with_tensorFlow/Chapter09/log/
+/action/**/model/**
